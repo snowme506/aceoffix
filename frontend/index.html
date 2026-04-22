@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AceOffix - 骑行生活</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260422s">
+  <style>
+    @media (min-width: 768px) {
+      .hero { display: flex; min-height: 400px; }
+      .hero-img-wrap { width: 80%; }
+      .hero-text { width: 20%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="header-logo">Ace<span>Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="header-btn">&#x2714;</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" id="heroCarousel">
+    <div class="hero-slides" id="heroSlides"></div>
+    <div class="hero-dots" id="heroDots"></div>
+  </section>
+
+  <hr class="sep-double">
+
+  <!-- Products Grid -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-title">热卖</span>
+    </div>
+    <div class="prod-grid" id="prodGrid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- Join Us -->
+  <section class="join-sec">
+    <div class="join-inner">
+      <h2 class="join-title">加入我们的社区</h2>
+      <p class="join-sub">获取新品发布、活动与优惠信息</p>
+      <form class="join-form" onsubmit="return false;">
+        <input type="email" class="join-input" placeholder="输入您的邮箱">
+        <button type="submit" class="join-btn">注册</button>
+      </form>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-logo">AceOffix</div>
+    <div class="footer-links">
+      <a href="stores.html">门店查询</a>
+      <a href="admin.html">管理后台</a>
+    </div>
+    <p class="footer-copy">© 2026 AceOffix. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    // Hero carousel - load from API
+    (function() {
+      var slidesContainer = document.getElementById('heroSlides');
+      var dotsWrap = document.getElementById('heroDots');
+      var idx = 0;
+      var timer = null;
+      var slides = [];
+
+      function renderBanners(banners) {
+        if (!banners || !banners.length) {
+          slidesContainer.innerHTML = '<div class="hero-slide active"><img src="/img/x1.jpg" alt=""><div class="hero-content"><h1 class="hero-title">AceOffix</h1></div>';
+          return;
+        }
+
+        slidesContainer.innerHTML = banners.map(function(b, i) {
+          var link = b.link_url || 'product.html';
+          var title = b.title || '';
+          return '<div class="hero-slide' + (i === 0 ? ' active' : '') + '">' +
+            '<img src="' + escapeHtml(b.image_url) + '" alt="' + escapeHtml(title) + '">' +
+            '<div class="hero-content">' +
+              '<h1 class="hero-title">' + escapeHtml(title) + '</h1>' +
+              '<a href="' + escapeHtml(link) + '" class="hero-link">选购 →</a>' +
+            '</div>' +
+          '</div>';
+        }).join('');
+
+        dotsWrap.innerHTML = banners.map(function(_, i) {
+          return '<span class="hero-dot' + (i === 0 ? ' active' : '') + '" data-i="' + i + '"></span>';
+        }).join('');
+
+        slides = document.querySelectorAll('.hero-slide');
+        if (slides.length <= 1) return;
+
+        var dots = dotsWrap.querySelectorAll('.hero-dot');
+
+        window.showHeroSlide = function(n) {
+          slides.forEach(function(s) { s.classList.remove('active'); });
+          dots.forEach(function(d) { d.classList.remove('active'); });
+          slides[n].classList.add('active');
+          dots[n].classList.add('active');
+          idx = n;
+        };
+
+        dots.forEach(function(d, i) {
+          d.addEventListener('click', function() { window.showHeroSlide(i); });
+        });
+
+        timer = setInterval(function() {
+          window.showHeroSlide((idx + 1) % slides.length);
+        }, 4000);
+      }
+
+      PublicAPI.banners().then(function(res) {
+        if (res.data && res.data.items && res.data.items.length) {
+          renderBanners(res.data.items);
+        } else {
+          renderBanners([]);
+        }
+      }).catch(function() {
+        renderBanners([]);
+      });
+    })();
+
+    // Load products
+    PublicAPI.products({ page: 1, page_size: 20 }).then(function(res) {
+      var grid = document.getElementById('prodGrid');
+      if (!res.data || !res.data.items || !res.data.items.length) {
+        grid.innerHTML = '<div class="empty">暂无商品</div>';
+        return;
+      }
+      renderProducts(grid, res.data.items);
+    }).catch(function(err) {
+      console.error('Products load error:', err);
+      document.getElementById('prodGrid').innerHTML = '<div class="empty">加载失败: ' + (err.message || '网络错误') + '</div>';
+    });
+  </script>
+</body>
+</html>

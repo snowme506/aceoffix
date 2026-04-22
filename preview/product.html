@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>商品 - AceOffix</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260422s">
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="header-logo">Ace<span style="color:#e8650a">Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="header-btn">&#x2714;</a>
+    </div>
+  </header>
+
+  <div id="productDetail">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    (function() {
+      var container = document.getElementById('productDetail');
+      var id = new URLSearchParams(location.search).get('id');
+      var categoryId = new URLSearchParams(location.search).get('category_id');
+      var keyword = new URLSearchParams(location.search).get('keyword');
+
+      function showList() {
+        var params = { page: 1, page_size: 50 };
+        if (categoryId) params.category_id = parseInt(categoryId);
+        if (keyword) params.keyword = keyword;
+
+        PublicAPI.products(params).then(function(res) {
+          if (res.code !== 200 || !res.data || !res.data.items || !res.data.items.length) {
+            container.innerHTML = '<div class="empty">暂无商品</div>';
+            return;
+          }
+          renderProducts(container, res.data.items);
+        }).catch(function(err) {
+          console.error('Load error:', err);
+          container.innerHTML = '<div class="empty">加载失败: ' + (err.message || '网络错误') + '</div>';
+        });
+      }
+
+      function showDetail(id) {
+        PublicAPI.productDetail(id).then(function(res) {
+          if (res.code !== 200 || !res.data) {
+            container.innerHTML = '<div class="empty">商品不存在</div>';
+            return;
+          }
+          var p = res.data;
+          var images = (p.images && p.images.length) ? p.images : [];
+          var mainSrc = images.length ? images[0].replace(/^\/frontend\//, '/') : '';
+          var mainImg = mainSrc ? '<img id="pdMainImg" src="' + escapeHtml(mainSrc) + '" alt="' + escapeHtml(p.name) + '">' : '<div class="pd-no-img">📷</div>';
+
+          var specsHtml = '';
+          if (p.specs && p.specs.length) {
+            specsHtml = '<div class="pd-section"><div class="pd-section-title">规格</div><div class="pd-specs">' +
+              p.specs.map(function(s) {
+                var label = (typeof s === 'object' && s !== null) ? (s.key + ': ' + s.value) : String(s);
+                return '<span class="spec-tag">' + escapeHtml(label) + '</span>';
+              }).join('') + '</div></div>';
+          }
+
+          container.innerHTML = '<div class="pd-gallery">' + mainImg + '</div>' +
+            '<div class="pd-info">' +
+              '<div class="pd-name">' + escapeHtml(p.name) + '</div>' +
+              '<div class="pd-sub">' + escapeHtml(p.subtitle || '') + '</div>' +
+              '<div class="pd-price">¥' + Math.round(p.price/100).toLocaleString() + '</div>' +
+              specsHtml +
+              '<div class="pd-section"><div class="pd-section-title">商品详情</div><div class="pd-desc">' + escapeHtml(p.description || '暂无描述') + '</div></div>' +
+            '</div>';
+        }).catch(function(err) {
+          console.error('Detail error:', err);
+          container.innerHTML = '<div class="empty">加载失败</div>';
+        });
+      }
+
+      if (id) {
+        showDetail(id);
+      } else {
+        showList();
+      }
+    })();
+  </script>
+</body>
+</html>

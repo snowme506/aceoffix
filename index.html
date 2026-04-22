@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AceOffix - 骑行生活</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <header class="header">
+    <a href="index.html" class="header-logo">Ace<span>Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="header-btn">👤</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-img-wrap">
+      <img class="hero-img" src="/frontend/img/x1.jpg" alt="AceOffix" id="heroImg">
+    </div>
+    <div class="hero-text">
+      <p class="hero-label">ACE LINE</p>
+      <h1 class="hero-title" id="heroTitle">折叠自行车 X1</h1>
+      <p class="hero-sub" id="heroSub">英国经典折叠车，小巧便携</p>
+      <p class="hero-price"><span class="hero-price-num" id="heroPrice">¥2,999</span> <span class="hero-price-from">起</span></p>
+      <a href="product.html?id=1" class="hero-cta">选购 →</a>
+    </div>
+  </section>
+
+  <!-- Lines Navigation -->
+  <section class="lines-nav" id="linesNav">
+    <span class="lines-nav-item active" data-id="1">X1 Line</span>
+    <span class="lines-nav-item" data-id="2">R2 Line</span>
+    <span class="lines-nav-item" data-id="3">配件</span>
+    <span class="lines-nav-item" data-id="4">装备</span>
+  </section>
+
+  <!-- Categories -->
+  <section class="sec">
+    <div class="container">
+      <div class="cat-row">
+        <a href="product.html?category_id=1" class="cat-link">Bikes</a>
+        <a href="product.html?category_id=2" class="cat-link">Parts</a>
+        <a href="product.html?category_id=3" class="cat-link">Gear</a>
+        <a href="product.html?category_id=4" class="cat-link">Wear</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Products Grid -->
+  <section class="sec">
+    <div class="container">
+      <div class="sec-head">
+        <span class="sec-title">热卖</span>
+      </div>
+      <div class="prod-grid" id="prodGrid">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-logo">AceOffix</div>
+      <div class="footer-links">
+        <a href="stores.html">门店查询</a>
+        <a href="admin.html">管理后台</a>
+      </div>
+      <p class="footer-copy">© 2026 AceOffix. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/api.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+  (function() {
+
+    // Lines hero switcher
+    var linesData = [
+      { id: 1, name: '折叠自行车 X1', sub: '英国经典折叠车，小巧便携', price: '¥2,999', img: '/frontend/img/x1.jpg' },
+      { id: 2, name: '折叠自行车 R2', sub: '碳纤维车架，轻量折叠', price: '¥4,999', img: '/frontend/img/r2.jpg' },
+      { id: 3, name: '配件系列', sub: '精选配件，品质之选', price: '', img: '/frontend/img/x1.jpg' },
+      { id: 4, name: '装备系列', sub: '专业装备，安全骑行', price: '', img: '/frontend/img/x1.jpg' },
+    ];
+
+    window.switchLine = function(el, id) {
+      document.querySelectorAll('.lines-nav-item').forEach(function(e) { e.classList.remove('active'); });
+      el.classList.add('active');
+      var d = linesData.find(function(l) { return l.id === id; });
+      if (!d) return;
+      document.getElementById('heroTitle').textContent = d.name;
+      document.getElementById('heroSub').textContent = d.sub;
+      document.getElementById('heroImg').src = d.img;
+      var priceEl = document.getElementById('heroPrice');
+      if (d.price) {
+        priceEl.parentElement.innerHTML = '<span class="hero-price-num" id="heroPrice">' + d.price + '</span> <span class="hero-price-from">起</span>';
+      } else {
+        priceEl.parentElement.innerHTML = '';
+      }
+    };
+
+    document.querySelectorAll('.lines-nav-item').forEach(function(el) {
+      el.addEventListener('click', function() {
+        switchLine(this, parseInt(this.dataset.id));
+      });
+    });
+
+    // Load products
+    PublicAPI.products({ page: 1, page_size: 20 }).then(function(res) {
+      var grid = document.getElementById('prodGrid');
+      if (!res.data || !res.data.items || !res.data.items.length) {
+        grid.innerHTML = '<div class="empty">暂无商品</div>';
+        return;
+      }
+      grid.innerHTML = res.data.items.map(function(p) {
+        var img = (p.images && p.images.length) ? '<img src="' + escapeHtml(p.images[0]) + '" alt="' + escapeHtml(p.name) + '">' : '<div class="prod-no-img">📷</div>';
+        return '<a class="prod-card" href="product.html?id=' + p.id + '">' +
+          '<div class="prod-img">' + img + '</div>' +
+          '<div class="prod-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="prod-price">' + (p.original_price ? '<span class="prod-price-main">¥' + Math.round(p.price/100).toLocaleString() + '</span>' : '') + '</div>' +
+        '</a>';
+      }).join('');
+    }).catch(function() {
+      document.getElementById('prodGrid').innerHTML = '<div class="empty">加载失败</div>';
+    });
+  })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>积分明细 - AceOffix</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .points-hero {
+      background: var(--bg2);
+      padding: 32px var(--gap);
+      text-align: center;
+      margin: -56px calc(-1 * var(--gap)) 0;
+      padding-top: 64px;
+      margin-bottom: 32px;
+    }
+    .points-label {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-light);
+    }
+    .points-value {
+      font-size: var(--text-3xl);
+      font-weight: 700;
+      color: var(--text);
+      margin-top: 6px;
+    }
+    .log-section-title {
+      font-size: var(--text-xs);
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-bottom: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .log-item:last-child { border-bottom: none; }
+    .log-info { flex: 1; }
+    .log-desc { font-size: var(--text-sm); color: var(--text); }
+    .log-date { font-size: var(--text-xs); color: var(--text-light); margin-top: 2px; }
+    .log-amount {
+      font-size: var(--text-base);
+      font-weight: 600;
+      margin-left: 16px;
+    }
+    .log-amount.positive { color: #2d8a2d; }
+    .log-amount.negative { color: #e8650a; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="header-logo" style="font-size: var(--text-md)">Ace<span style="color:#e8650a">Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="header-btn">&#x2714;</a>
+    </div>
+  </header>
+
+  <div class="container" style="padding-top:16px">
+    <div class="points-hero">
+      <div class="points-label">当前积分</div>
+      <div class="points-value" id="pointsBalance">--</div>
+    </div>
+
+    <div class="log-section-title">积分明细</div>
+    <div id="logList">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    (function() {
+      if (!isLoggedIn()) {
+        location.href = 'login.html';
+        return;
+      }
+
+      function formatDate(dt) {
+        if (!dt) return '';
+        var d = new Date(dt);
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      }
+
+      function renderLogs(logs, points) {
+        document.getElementById('pointsBalance').textContent = points || 0;
+        var list = document.getElementById('logList');
+        if (!logs || logs.length === 0) {
+          list.innerHTML = '<div class="empty">暂无积分记录</div>';
+          return;
+        }
+        list.innerHTML = logs.map(function(log) {
+          var amtClass = log.change_amount >= 0 ? 'positive' : 'negative';
+          var amtPrefix = log.change_amount > 0 ? '+' : '';
+          return '<div class="log-item">' +
+            '<div class="log-info">' +
+              '<div class="log-desc">' + escapeHtml(log.description || '') + '</div>' +
+              '<div class="log-date">' + formatDate(log.created_at) + '</div>' +
+            '</div>' +
+            '<div class="log-amount ' + amtClass + '">' + amtPrefix + log.change_amount + '</div>' +
+          '</div>';
+        }).join('');
+      }
+
+      (function() {
+        var cached = localStorage.getItem('user_info');
+        var user = null;
+        if (cached) {
+          try { user = JSON.parse(cached); } catch (e) {}
+        }
+        document.getElementById('pointsBalance').textContent = (user && user.points) || 0;
+      })();
+
+      UserAPI.profile().then(function(res) {
+        if (res.code === 200) {
+          localStorage.setItem('user_info', JSON.stringify(res.data));
+          var pts = (res.data && res.data.points) ? res.data.points : 0;
+          UserAPI.pointsLogs().then(function(r) {
+            if (r.code === 200) {
+              renderLogs(r.data.items || [], pts);
+            } else {
+              document.getElementById('logList').innerHTML = '<div class="empty">加载失败</div>';
+            }
+          }).catch(function() {
+            document.getElementById('logList').innerHTML = '<div class="empty">加载失败</div>';
+          });
+        }
+      }).catch(function(e) {
+        if (e.message && e.message.includes('认证')) {
+          localStorage.removeItem('user_token');
+          localStorage.removeItem('user_info');
+          location.href = 'login.html';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

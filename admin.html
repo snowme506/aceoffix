@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>后台管理 - AceOffix</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div id="loginPage" class="admin-login">
+    <div class="login-card">
+      <div class="login-title">AceOffix 管理后台</div>
+      <div class="form-group">
+        <label class="form-label">用户名</label>
+        <input class="form-input" type="text" id="adminUser" placeholder="admin" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label class="form-label">密码</label>
+        <input class="form-input" type="password" id="adminPass" placeholder="请输入密码" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" style="width:100%" id="loginBtn">登录</button>
+      <p class="text-center mt-8" style="font-size:0.8rem;color:var(--text-secondary)">默认: admin / admin123</p>
+    </div>
+  </div>
+
+  <div id="adminPage" class="hidden">
+    <div class="admin-header">
+      <div class="header-logo">AceOffix 后台</div>
+      <div class="header-actions">
+        <span id="adminName" style="font-size:0.85rem;color:var(--text-secondary)"></span>
+        <button class="btn btn-sm btn-outline" onclick="adminLogout()">退出</button>
+      </div>
+    </div>
+
+    <div class="admin-body container">
+      <section class="section" style="margin-top:16px">
+        <div class="stats-grid" id="statsGrid">
+          <div class="loading"><div class="spinner"></div></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="tabs" id="tabs">
+          <button class="tab-btn active" data-tab="products">商品</button>
+          <button class="tab-btn" data-tab="categories">分类</button>
+          <button class="tab-btn" data-tab="stores">门店</button>
+          <button class="tab-btn" data-tab="orders">订单</button>
+          <button class="tab-btn" data-tab="members">会员</button>
+        </div>
+
+        <div id="panel-products" class="tab-panel">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="form-input" id="prodSearch" placeholder="搜索商品" style="flex:1;min-width:140px">
+            <button class="btn btn-primary btn-sm" id="prodSearchBtn">搜索</button>
+            <button class="btn btn-secondary btn-sm" id="prodAddBtn">+ 新建</button>
+          </div>
+          <div class="table-wrap" id="prodTableWrap"></div>
+          <div class="pagination" id="prodPagination"></div>
+        </div>
+
+        <div id="panel-categories" class="tab-panel hidden">
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <button class="btn btn-secondary btn-sm" id="catAddBtn">+ 新建分类</button>
+          </div>
+          <div class="table-wrap" id="catTableWrap"></div>
+          <div class="pagination" id="catPagination"></div>
+        </div>
+
+        <div id="panel-stores" class="tab-panel hidden">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="form-input" id="storeSearch" placeholder="搜索门店" style="flex:1;min-width:140px">
+            <button class="btn btn-primary btn-sm" id="storeSearchBtn">搜索</button>
+            <button class="btn btn-secondary btn-sm" id="storeAddBtn">+ 新建</button>
+          </div>
+          <div class="table-wrap" id="storeTableWrap"></div>
+          <div class="pagination" id="storePagination"></div>
+        </div>
+
+        <div id="panel-orders" class="tab-panel hidden">
+          <div class="table-wrap" id="orderTableWrap"></div>
+          <div class="pagination" id="orderPagination"></div>
+        </div>
+
+        <div id="panel-members" class="tab-panel hidden">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input class="form-input" id="memberSearch" placeholder="搜索手机号/昵称" style="flex:1;min-width:140px">
+            <button class="btn btn-primary btn-sm" id="memberSearchBtn">搜索</button>
+          </div>
+          <div class="table-wrap" id="memberTableWrap"></div>
+          <div class="pagination" id="memberPagination"></div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div class="modal-overlay hidden" id="modalOverlay">
+    <div class="modal" id="modalBox"></div>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    (function() {
+      const loginPage = $('#loginPage');
+      const adminPage = $('#adminPage');
+      let currentTab = 'products';
+
+      // Check auth
+      if (getAdminToken()) {
+        showAdmin();
+        loadAdminProfile();
+        loadStats();
+        loadTab(currentTab);
+      }
+
+      // Login
+      $('#loginBtn').addEventListener('click', async () => {
+        const username = $('#adminUser').value.trim();
+        const password = $('#adminPass').value.trim();
+        if (!username || !password) { showToast('请输入用户名和密码'); return; }
+        try {
+          const res = await AdminAPI.login(username, password);
+          if (res.code === 200) {
+            localStorage.setItem('admin_token', res.data.access_token);
+            localStorage.setItem('admin', JSON.stringify(res.data.admin));
+            showAdmin();
+            loadAdminProfile();
+            loadStats();
+            loadTab(currentTab);
+            showToast('登录成功');
+          }
+        } catch (e) {
+          showToast(e.message || '登录失败');
+        }
+      });
+
+      function showAdmin() {
+        loginPage.classList.add('hidden');
+        adminPage.classList.remove('hidden');
+      }
+
+      async function loadAdminProfile() {
+        try {
+          const res = await AdminAPI.profile();
+          if (res.code === 200) {
+            $('#adminName').textContent = res.data.username || 'Admin';
+          }
+        } catch (e) {}
+      }
+
+      async function loadStats() {
+        try {
+          const res = await AdminAPI.statsOverview();
+          if (res.code === 200) {
+            const d = res.data;
+            $('#statsGrid').innerHTML = `
+              <div class="stat-card"><div class="stat-value">${d.total_users}</div><div class="stat-label">总会员</div></div>
+              <div class="stat-card"><div class="stat-value">${d.total_orders}</div><div class="stat-label">总订单</div></div>
+              <div class="stat-card"><div class="stat-value">${fmtPrice(d.total_sales)}</div><div class="stat-label">总销售额</div></div>
+              <div class="stat-card"><div class="stat-value">${d.total_products}</div><div class="stat-label">商品数</div></div>
+              <div class="stat-card"><div class="stat-value">${d.today_orders}</div><div class="stat-label">今日订单</div></div>
+              <div class="stat-card"><div class="stat-value">${fmtPrice(d.today_sales)}</div><div class="stat-label">今日销售额</div></div>
+            `;
+          }
+        } catch (e) {
+          $('#statsGrid').innerHTML = '<div class="empty">加载失败</div>';
+        }
+      }
+
+      // Tabs
+      $$('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          $$('.tab-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          $$('.tab-panel').forEach(p => p.classList.add('hidden'));
+          $(`#panel-${btn.dataset.tab}`).classList.remove('hidden');
+          currentTab = btn.dataset.tab;
+          loadTab(currentTab);
+        });
+      });
+
+      function loadTab(tab) {
+        if (tab === 'products') loadProducts();
+        if (tab === 'categories') loadCategories();
+        if (tab === 'stores') loadStores();
+        if (tab === 'orders') loadOrders();
+        if (tab === 'members') loadMembers();
+      }
+
+      // Products
+      let prodPage = 1;
+      $('#prodSearchBtn').addEventListener('click', () => { prodPage = 1; loadProducts(); });
+      $('#prodSearch').addEventListener('keydown', e => { if (e.key === 'Enter') { prodPage = 1; loadProducts(); } });
+      $('#prodAddBtn').addEventListener('click', () => openProductForm());
+
+      async function loadProducts() {
+        const wrap = $('#prodTableWrap');
+        wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        const params = { page: prodPage, page_size: 10 };
+        const kw = $('#prodSearch').value.trim();
+        if (kw) params.keyword = kw;
+        try {
+          const res = await AdminAPI.productList(params);
+          if (res.code === 200) {
+            const data = res.data;
+            if (!data.items.length) { wrap.innerHTML = '<div class="empty">暂无商品</div>'; return; }
+            wrap.innerHTML = `
+              <table>
+                <thead><tr><th>ID</th><th>名称</th><th>价格</th><th>库存</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  ${data.items.map(p => `
+                    <tr>
+                      <td>${p.id}</td>
+                      <td>${escapeHtml(p.name)}</td>
+                      <td>${fmtPrice(p.price)}</td>
+                      <td>${p.stock}</td>
+                      <td><span class="badge ${p.status === 1 ? 'badge-success' : 'badge-danger'}">${p.status === 1 ? '上架' : '下架'}</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-outline" onclick="editProduct(${p.id})">编辑</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteProduct(${p.id})">删除</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+            renderPagination($('#prodPagination'), prodPage, 10, data.total, p => { prodPage = p; loadProducts(); });
+          }
+        } catch (e) { wrap.innerHTML = '<div class="empty">加载失败</div>'; }
+      }
+
+      window.editProduct = async (id) => {
+        try {
+          const res = await AdminAPI.productList({ page: 1, page_size: 100 });
+          const p = res.data.items.find(x => x.id === id);
+          if (!p) return;
+          openProductForm(p);
+        } catch (e) {}
+      };
+
+      window.deleteProduct = async (id) => {
+        if (!confirm('确定删除该商品？')) return;
+        try {
+          await AdminAPI.productDelete(id);
+          showToast('删除成功');
+          loadProducts();
+        } catch (e) { showToast('删除失败'); }
+      };
+
+      function openProductForm(p = null) {
+        const isEdit = !!p;
+        showModal(`${isEdit ? '编辑' : '新建'}商品`, `
+          <div class="form-group"><label class="form-label">名称</label><input class="form-input" id="pfName" value="${escapeHtml(p?.name || '')}"></div>
+          <div class="form-group"><label class="form-label">副标题</label><input class="form-input" id="pfSub" value="${escapeHtml(p?.subtitle || '')}"></div>
+          <div class="form-group"><label class="form-label">价格(分)</label><input class="form-input" type="number" id="pfPrice" value="${p?.price || 0}"></div>
+          <div class="form-group"><label class="form-label">原价(分)</label><input class="form-input" type="number" id="pfOri" value="${p?.original_price || 0}"></div>
+          <div class="form-group"><label class="form-label">库存</label><input class="form-input" type="number" id="pfStock" value="${p?.stock || 0}"></div>
+          <div class="form-group"><label class="form-label">分类ID</label><input class="form-input" type="number" id="pfCat" value="${p?.category_id || 1}"></div>
+          <div class="form-group"><label class="form-label">状态</label>
+            <select class="form-input" id="pfStatus">
+              <option value="1" ${p?.status === 1 ? 'selected' : ''}>上架</option>
+              <option value="0" ${p?.status === 0 ? 'selected' : ''}>下架</option>
+            </select>
+          </div>
+        `, async () => {
+          const body = {
+            name: $('#pfName').value,
+            subtitle: $('#pfSub').value,
+            price: parseInt($('#pfPrice').value) || 0,
+            original_price: parseInt($('#pfOri').value) || 0,
+            stock: parseInt($('#pfStock').value) || 0,
+            category_id: parseInt($('#pfCat').value) || 1,
+            status: parseInt($('#pfStatus').value),
+          };
+          try {
+            if (isEdit) await AdminAPI.productUpdate(p.id, body);
+            else await AdminAPI.productCreate(body);
+            showToast('保存成功'); closeModal(); loadProducts();
+          } catch (e) { showToast(e.message || '保存失败'); }
+        });
+      }
+
+      // Categories
+      let catPage = 1;
+      $('#catAddBtn').addEventListener('click', () => openCategoryForm());
+
+      async function loadCategories() {
+        const wrap = $('#catTableWrap');
+        wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+          const res = await AdminAPI.categoryList({ page: catPage, page_size: 10 });
+          if (res.code === 200) {
+            const data = res.data;
+            if (!data.items.length) { wrap.innerHTML = '<div class="empty">暂无分类</div>'; return; }
+            wrap.innerHTML = `
+              <table>
+                <thead><tr><th>ID</th><th>名称</th><th>图标</th><th>排序</th><th>状态</th><th>操作</th></tr></thead>
+                <tbody>
+                  ${data.items.map(c => `
+                    <tr>
+                      <td>${c.id}</td>
+                      <td>${escapeHtml(c.name)}</td>
+                      <td>${escapeHtml(c.icon || '-')}</td>
+                      <td>${c.sort_order}</td>
+                      <td><span class="badge ${c.is_active ? 'badge-success' : 'badge-danger'}">${c.is_active ? '启用' : '禁用'}</span></td>
+                      <td>
+                        <button class="btn btn-sm btn-outline" onclick="editCategory(${c.id}, '${escapeHtml(c.name)}', '${escapeHtml(c.icon||'')}', ${c.sort_order}, ${c.is_active?1:0})">编辑</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCategory(${c.id})">删除</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+            renderPagination($('#catPagination'), catPage, 10, data.total, p => { catPage = p; loadCategories(); });
+          }
+        } catch (e) { wrap.innerHTML = '<div class="empty">加载失败</div>'; }
+      }
+
+      window.editCategory = (id, name, icon, sort, active) => openCategoryForm({ id, name, icon, sort_order: sort, is_active: active });
+
+      window.deleteCategory = async (id) => {
+        if (!confirm('确定删除？')) return;
+        try { await AdminAPI.categoryDelete(id); showToast('删除成功'); loadCategories(); } catch (e) { showToast('删除失败'); }
+      };
+
+      function openCategoryForm(c = null) {
+        const isEdit = !!c;
+        showModal(`${isEdit ? '编辑' : '新建'}分类`, `
+          <div class="form-group"><label class="form-label">名称</label><input class="form-input" id="cfName" value="${escapeHtml(c?.name || '')}"></div>
+          <div class="form-group"><label class="form-label">图标</label><input class="form-input" id="cfIcon" value="${escapeHtml(c?.icon || '')}"></div>
+          <div class="form-group"><label class="form-label">排序</label><input class="form-input" type="number" id="cfSort" value="${c?.sort_order || 0}"></div>
+          <div class="form-group"><label class="form-label">状态</label>
+            <select class="form-input" id="cfActive">
+              <option value="1" ${c?.is_active ? 'selected' : ''}>启用</option>
+              <option value="0" ${!c?.is_active ? 'selected' : ''}>禁用</option>
+            </select>
+          </div>
+        `, async () => {
+          const body = { name: $('#cfName').value, icon: $('#cfIcon').value, sort_order: parseInt($('#cfSort').value)||0, is_active: $('#cfActive').value === '1' };
+          try {
+            if (isEdit) await AdminAPI.categoryUpdate(c.id, body);
+            else await AdminAPI.categoryCreate(body);
+            showToast('保存成功'); closeModal(); loadCategories();
+          } catch (e) { showToast(e.message || '保存失败'); }
+        });
+      }
+
+      // Stores
+      let storePage = 1;
+      $('#storeSearchBtn').addEventListener('click', () => { storePage = 1; loadStores(); });
+      $('#storeSearch').addEventListener('keydown', e => { if (e.key === 'Enter') { storePage = 1; loadStores(); } });
+      $('#storeAddBtn').addEventListener('click', () => openStoreForm());
+
+      async function loadStores() {
+        const wrap = $('#storeTableWrap');
+        wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        const params = { page: storePage, page_size: 10 };
+        const kw = $('#storeSearch').value.trim();
+        if (kw) params.keyword = kw;
+        try {
+          const res = await AdminAPI.storeList(params);
+          if (res.code === 200) {
+            const data = res.data;
+            if (!data.items.length) { wrap.innerHTML = '<div class="empty">暂无门店</div>'; return; }
+            wrap.innerHTML = `
+              <table>
+                <thead><tr><th>ID</th><th>名称</th><th>城市</th><th>地址</th><th>电话</th><th>操作</th></tr></thead>
+                <tbody>
+                  ${data.items.map(s => `
+                    <tr>
+                      <td>${s.id}</td>
+                      <td>${escapeHtml(s.name)}</td>
+                      <td>${escapeHtml(s.city || '-')}</td>
+                      <td>${escapeHtml(s.address || '-')}</td>
+                      <td>${escapeHtml(s.phone || '-')}</td>
+                      <td>
+                        <button class="btn btn-sm btn-outline" onclick="editStore(${s.id})">编辑</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteStore(${s.id})">删除</button>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+            renderPagination($('#storePagination'), storePage, 10, data.total, p => { storePage = p; loadStores(); });
+          }
+        } catch (e) { wrap.innerHTML = '<div class="empty">加载失败</div>'; }
+      }
+
+      window.editStore = async (id) => {
+        try {
+          const res = await AdminAPI.storeList({ page: 1, page_size: 100 });
+          const s = res.data.items.find(x => x.id === id);
+          if (!s) return;
+          openStoreForm(s);
+        } catch (e) {}
+      };
+
+      window.deleteStore = async (id) => {
+        if (!confirm('确定删除？')) return;
+        try { await AdminAPI.storeDelete(id); showToast('删除成功'); loadStores(); } catch (e) { showToast('删除失败'); }
+      };
+
+      function openStoreForm(s = null) {
+        const isEdit = !!s;
+        showModal(`${isEdit ? '编辑' : '新建'}门店`, `
+          <div class="form-group"><label class="form-label">名称</label><input class="form-input" id="sfName" value="${escapeHtml(s?.name || '')}"></div>
+          <div class="form-group"><label class="form-label">省</label><input class="form-input" id="sfProv" value="${escapeHtml(s?.province || '')}"></div>
+          <div class="form-group"><label class="form-label">市</label><input class="form-input" id="sfCity" value="${escapeHtml(s?.city || '')}"></div>
+          <div class="form-group"><label class="form-label">区</label><input class="form-input" id="sfDist" value="${escapeHtml(s?.district || '')}"></div>
+          <div class="form-group"><label class="form-label">地址</label><input class="form-input" id="sfAddr" value="${escapeHtml(s?.address || '')}"></div>
+          <div class="form-group"><label class="form-label">电话</label><input class="form-input" id="sfPhone" value="${escapeHtml(s?.phone || '')}"></div>
+          <div class="form-group"><label class="form-label">营业时间</label><input class="form-input" id="sfHours" value="${escapeHtml(s?.hours || '')}"></div>
+        `, async () => {
+          const body = {
+            name: $('#sfName').value, province: $('#sfProv').value, city: $('#sfCity').value,
+            district: $('#sfDist').value, address: $('#sfAddr').value,
+            phone: $('#sfPhone').value, hours: $('#sfHours').value,
+            status: 1, sort_order: s?.sort_order || 0,
+          };
+          try {
+            if (isEdit) await AdminAPI.storeUpdate(s.id, body);
+            else await AdminAPI.storeCreate(body);
+            showToast('保存成功'); closeModal(); loadStores();
+          } catch (e) { showToast(e.message || '保存失败'); }
+        });
+      }
+
+      // Orders
+      let orderPage = 1;
+      async function loadOrders() {
+        const wrap = $('#orderTableWrap');
+        wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        try {
+          const res = await AdminAPI.orderList({ page: orderPage, page_size: 10 });
+          if (res.code === 200) {
+            const data = res.data;
+            if (!data.items.length) { wrap.innerHTML = '<div class="empty">暂无订单</div>'; return; }
+            wrap.innerHTML = `
+              <table>
+                <thead><tr><th>订单号</th><th>金额</th><th>状态</th><th>支付</th><th>时间</th></tr></thead>
+                <tbody>
+                  ${data.items.map(o => `
+                    <tr>
+                      <td>${escapeHtml(o.order_no)}</td>
+                      <td>${fmtPrice(o.final_amount)}</td>
+                      <td><span class="badge ${statusBadge(o.status)}">${escapeHtml(o.status)}</span></td>
+                      <td><span class="badge ${o.payment_status === 'paid' ? 'badge-success' : 'badge-warn'}">${escapeHtml(o.payment_status)}</span></td>
+                      <td>${formatDateTime(o.created_at)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+            renderPagination($('#orderPagination'), orderPage, 10, data.total, p => { orderPage = p; loadOrders(); });
+          }
+        } catch (e) { wrap.innerHTML = '<div class="empty">加载失败</div>'; }
+      }
+
+      function statusBadge(s) {
+        if (s === 'paid' || s === 'completed') return 'badge-success';
+        if (s === 'pending') return 'badge-warn';
+        return 'badge-danger';
+      }
+
+      // Members
+      let memberPage = 1;
+      $('#memberSearchBtn').addEventListener('click', () => { memberPage = 1; loadMembers(); });
+      $('#memberSearch').addEventListener('keydown', e => { if (e.key === 'Enter') { memberPage = 1; loadMembers(); } });
+
+      async function loadMembers() {
+        const wrap = $('#memberTableWrap');
+        wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+        const params = { page: memberPage, page_size: 10 };
+        const kw = $('#memberSearch').value.trim();
+        if (kw) params.keyword = kw;
+        try {
+          const res = await AdminAPI.memberList(params);
+          if (res.code === 200) {
+            const data = res.data;
+            if (!data.items.length) { wrap.innerHTML = '<div class="empty">暂无会员</div>'; return; }
+            wrap.innerHTML = `
+              <table>
+                <thead><tr><th>ID</th><th>手机</th><th>昵称</th><th>积分</th><th>等级</th><th>注册时间</th></tr></thead>
+                <tbody>
+                  ${data.items.map(u => `
+                    <tr>
+                      <td>${u.id}</td>
+                      <td>${escapeHtml(u.phone)}</td>
+                      <td>${escapeHtml(u.nickname || '-')}</td>
+                      <td>${u.points}</td>
+                      <td>${escapeHtml(u.member_level)}</td>
+                      <td>${formatDateTime(u.created_at)}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `;
+            renderPagination($('#memberPagination'), memberPage, 10, data.total, p => { memberPage = p; loadMembers(); });
+          }
+        } catch (e) { wrap.innerHTML = '<div class="empty">加载失败</div>'; }
+      }
+
+      // Modal helpers
+      function showModal(title, bodyHtml, onConfirm) {
+        $('#modalBox').innerHTML = `
+          <div class="modal-title">${title}</div>
+          <div>${bodyHtml}</div>
+          <div class="modal-actions">
+            <button class="btn btn-outline" onclick="closeModal()">取消</button>
+            <button class="btn btn-primary" id="modalConfirm">保存</button>
+          </div>
+        `;
+        $('#modalOverlay').classList.remove('hidden');
+        $('#modalConfirm').onclick = onConfirm;
+      }
+
+      window.closeModal = () => {
+        $('#modalOverlay').classList.add('hidden');
+      };
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AceOffix - 骑行生活</title>
+  <link rel="stylesheet" href="/css/style.css?v=20260422n">
+  <style>
+    @media (min-width: 768px) {
+      .hero { display: flex; min-height: 400px; }
+      .hero-img-wrap { width: 80%; }
+      .hero-text { width: 20%; }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="header-logo">Ace<span>Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions">
+      <a href="profile.html" class="header-btn">&#x2714;</a>
+    </div>
+  </header>
+
+  <!-- Hero -->
+  <section class="hero" id="heroCarousel">
+    <div class="hero-slides" id="heroSlides">
+      <div class="hero-slide active">
+        <img src="/img/x1.jpg" alt="折叠自行车 X1">
+        <div class="hero-content">
+          <h1 class="hero-title">折叠自行车 X1</h1>
+          <p class="hero-sub">英国经典折叠车，小巧便携</p>
+          <a href="product.html?id=1" class="hero-link">选购 →</a>
+        </div>
+      </div>
+      <div class="hero-slide">
+        <img src="/img/r2.jpg" alt="公路自行车 R2">
+        <div class="hero-content">
+          <h1 class="hero-title">公路自行车 R2</h1>
+          <p class="hero-sub">速度与优雅的完美结合</p>
+          <a href="product.html?id=2" class="hero-link">选购 →</a>
+        </div>
+      </div>
+    </div>
+    <div class="hero-dots" id="heroDots"></div>
+  </section>
+
+  <hr class="sep-double">
+
+  <!-- Products Grid -->
+  <section class="sec">
+    <div class="sec-head">
+      <span class="sec-title">热卖</span>
+    </div>
+    <div class="prod-grid" id="prodGrid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </section>
+
+  <!-- Join Us -->
+  <section class="join-sec">
+    <div class="join-inner">
+      <h2 class="join-title">加入我们的社区</h2>
+      <p class="join-sub">获取新品发布、活动与优惠信息</p>
+      <form class="join-form" onsubmit="return false;">
+        <input type="email" class="join-input" placeholder="输入您的邮箱">
+        <button type="submit" class="join-btn">注册</button>
+      </form>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="footer-logo">AceOffix</div>
+    <div class="footer-links">
+      <a href="stores.html">门店查询</a>
+      <a href="admin.html">管理后台</a>
+    </div>
+    <p class="footer-copy">© 2026 AceOffix. All rights reserved.</p>
+  </footer>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    // Hero carousel
+    (function() {
+      var slides = document.querySelectorAll('.hero-slide');
+      var dotsWrap = document.getElementById('heroDots');
+      var idx = 0;
+      var timer = null;
+      if (slides.length <= 1) return;
+      
+      dotsWrap.innerHTML = Array.from(slides).map(function(_, i) {
+        return '<span class="hero-dot" data-i="' + i + '"></span>';
+      }).join('');
+      
+      var dots = dotsWrap.querySelectorAll('.hero-dot');
+      
+      function show(n) {
+        slides.forEach(function(s) { s.classList.remove('active'); });
+        dots.forEach(function(d) { d.classList.remove('active'); });
+        slides[n].classList.add('active');
+        dots[n].classList.add('active');
+        idx = n;
+      }
+      
+      dots.forEach(function(d, i) {
+        d.addEventListener('click', function() { show(i); });
+      });
+      
+      function next() {
+        show((idx + 1) % slides.length);
+      }
+      
+      timer = setInterval(next, 4000);
+      show(0);
+    })();
+
+    // Load products
+    PublicAPI.products({ page: 1, page_size: 20 }).then(function(res) {
+      var grid = document.getElementById('prodGrid');
+      if (!res.data || !res.data.items || !res.data.items.length) {
+        grid.innerHTML = '<div class="empty">暂无商品</div>';
+        return;
+      }
+      grid.innerHTML = res.data.items.map(function(p) {
+        var rawImg = (p.images && p.images.length) ? p.images[0] : '';
+        var imgSrc = rawImg.replace(/^\/frontend\//, '/');
+        var img = imgSrc ? '<img src="' + escapeHtml(imgSrc) + '" alt="' + escapeHtml(p.name) + '">' : '<div class="prod-no-img">📷</div>';
+        return '<a class="prod-card" href="product.html?id=' + p.id + '">' +
+          '<div class="prod-img">' + img + '</div>' +
+          '<div class="prod-name">' + escapeHtml(p.name) + '</div>' +
+          '<div class="prod-price">' + (p.original_price ? '<span class="prod-price-main">¥' + Math.round(p.price/100) + '</span>' : '') + '</div>' +
+        '</a>';
+      }).join('');
+    }).catch(function() {
+      document.getElementById('prodGrid').innerHTML = '<div class="empty">加载失败</div>';
+    });
+  </script>
+</body>
+</html>

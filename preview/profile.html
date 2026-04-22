@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>个人中心 - AceOffix</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .profile-hero {
+      background: var(--bg2);
+      padding: 32px var(--gap);
+      text-align: center;
+      margin: -56px calc(-1 * var(--gap)) 0;
+      padding-top: 64px;
+    }
+    .profile-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: var(--text-xl);
+      font-weight: 700;
+      margin: 0 auto 10px;
+    }
+    .profile-name {
+      font-size: var(--text-md);
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+    .profile-phone {
+      font-size: var(--text-sm);
+      color: var(--text-light);
+    }
+    .profile-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      margin: 0 0 24px;
+    }
+    .profile-stat {
+      background: var(--bg);
+      padding: 16px 8px;
+      text-align: center;
+    }
+    .profile-stat-value {
+      font-size: var(--text-xl);
+      font-weight: 700;
+      color: var(--text);
+    }
+    .profile-stat-label {
+      font-size: var(--text-xs);
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--text-light);
+      margin-top: 2px;
+    }
+    .menu-list {
+      border-top: 1px solid var(--border);
+    }
+    .menu-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: var(--text-sm);
+      color: var(--text);
+      transition: opacity 0.2s;
+    }
+    .menu-item:active { opacity: 0.6; }
+    .menu-item:last-child { border-bottom: none; }
+    .logout-btn {
+      margin-top: 32px;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-light);
+    }
+    .logout-btn:active { background: var(--bg2); }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <a href="index.html" class="header-logo" style="font-size: var(--text-md)">Ace<span style="color:#e8650a">Off</span>ix</a>
+    <nav class="header-nav">
+      <a href="product.html" class="header-nav-link">BIKES</a>
+      <a href="product.html?category_id=2" class="header-nav-link">PARTS</a>
+      <a href="stores.html" class="header-nav-link">STORES</a>
+    </nav>
+    <div class="header-actions"></div>
+  </header>
+
+  <div class="container" style="padding-top:16px">
+    <div class="profile-hero">
+      <div class="profile-avatar" id="avatarInitial">V</div>
+      <div class="profile-name" id="profileName">--</div>
+      <div class="profile-phone" id="profilePhone">--</div>
+    </div>
+
+    <div class="profile-stats">
+      <div class="profile-stat">
+        <div class="profile-stat-value" id="statPoints">--</div>
+        <div class="profile-stat-label">积分</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-value" id="statLevel">--</div>
+        <div class="profile-stat-label">等级</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-value" id="statSpent">--</div>
+        <div class="profile-stat-label">累计消费</div>
+      </div>
+    </div>
+
+    <div class="menu-list">
+      <a href="orders.html" class="menu-item">
+        <span>我的订单</span>
+        <span style="color:var(--text-light);font-size: var(--text-xl)">›</span>
+      </a>
+      <a href="points.html" class="menu-item">
+        <span>积分明细</span>
+        <span style="color:var(--text-light);font-size: var(--text-xl)">›</span>
+      </a>
+    </div>
+
+    <button class="btn logout-btn" onclick="doLogout()">退出登录</button>
+  </div>
+
+  <script src="/js/api.js"></script>
+  <script src="/js/main.js"></script>
+  <script>
+    (function() {
+      if (!isLoggedIn()) {
+        location.href = 'login.html';
+        return;
+      }
+
+      function renderUser(user) {
+        var name = user.nickname || '用户' + (user.phone ? user.phone.slice(-4) : '');
+        $('#profileName').textContent = name;
+        $('#profilePhone').textContent = user.phone || '';
+        $('#statPoints').textContent = user.points || 0;
+        $('#statLevel').textContent = (user.member_level || 'NORMAL').toUpperCase();
+        $('#statSpent').textContent = '¥' + Math.round((user.total_spent || 0)/100).toLocaleString();
+        $('#avatarInitial').textContent = name.charAt(0).toUpperCase();
+      }
+
+      var cached = localStorage.getItem('user_info');
+      if (cached) {
+        try { renderUser(JSON.parse(cached)); } catch (e) {}
+      }
+
+      (async function() {
+        try {
+          var res = await UserAPI.profile();
+          if (res.code === 200) {
+            renderUser(res.data);
+            localStorage.setItem('user_info', JSON.stringify(res.data));
+          }
+        } catch (e) {
+          if (e.message && (e.message.includes('认证') || e.message.includes('token'))) {
+            localStorage.removeItem('user_token');
+            localStorage.removeItem('user_info');
+            location.href = 'login.html';
+          }
+        }
+      })();
+
+      window.doLogout = function() {
+        localStorage.removeItem('user_token');
+        localStorage.removeItem('user_info');
+        location.href = 'index.html';
+      };
+    })();
+  </script>
+</body>
+</html>
