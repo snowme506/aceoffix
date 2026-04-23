@@ -207,7 +207,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: var(--border);
 }
 
-.prod-name {
+.prod-name { text-align: center;
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text);
@@ -219,7 +219,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: 0.5px;
 }
 
-.prod-price {
+.prod-price { text-align: center;
   margin-top: 4px;
 }
 
