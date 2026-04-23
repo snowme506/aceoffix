@@ -7,7 +7,7 @@
   --bg: #ffffff;
   --bg2: #f8f8f8;
   --border: #e5e5e5;
-  --gap: 20px;
+  --gap: 5px;
   --h: 64px;
   --max-w: 1280px;
   --text-xs:   0.7rem;
@@ -160,15 +160,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   width: 100%;
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 5px;
 }
 
 @media (min-width: 768px) {
-  .prod-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .prod-grid { grid-template-columns: repeat(3, 1fr); gap: 5px; }
 }
 
 @media (min-width: 1024px) {
-  .prod-grid { grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .prod-grid { grid-template-columns: repeat(4, 1fr); gap: 5px; }
 }
 
 .prod-card {
@@ -389,7 +389,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--bg2);
   border-radius: 2px;
   padding: 10px 14px;
-  gap: 10px;
+  gap: 5px;
   margin: var(--gap) 0;
 }
 .search-bar input {
@@ -524,7 +524,7 @@ tr:last-child td { border-bottom: none; }
   padding: 24px;
 }
 .modal-title { font-size: var(--text-md); font-weight: 700; margin-bottom: 16px; }
-.modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+.modal-actions { display: flex; gap: 5px; margin-top: 20px; }
 .modal-actions .btn { flex: 1; }
 
 /* ===== TOAST ===== */
