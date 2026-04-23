@@ -207,7 +207,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   color: var(--border);
 }
 
-.prod-name { text-align: center;
+.prod-name { text-align: center !important;
   font-size: var(--text-sm);
   font-weight: 600;
   color: var(--text);
@@ -219,7 +219,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: 0.5px;
 }
 
-.prod-price { text-align: center;
+.prod-price { text-align: center !important;
   margin-top: 4px;
 }
 
@@ -365,7 +365,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* ===== LOADING ===== */
 .loading, .empty {
-  text-align: center;
+  text-align: center !important;
   padding: 48px var(--gap);
   color: var(--text-light);
   font-size: var(--text-4xl);
@@ -600,7 +600,7 @@ tr:last-child td { border-bottom: none; }
 
 /* ===== UTILITY ===== */
 .hidden { display: none !important; }
-.text-center { text-align: center; }
+.text-center { text-align: center !important; }
 .text-danger { color: #e8650a; }
 .text-success { color: #2d8a2d; }
 /* ===== MEGA MENU ===== */
@@ -755,7 +755,7 @@ tr:last-child td { border-bottom: none; }
   bottom: 0;
   left: 0;
   right: 0;
-  text-align: center;
+  text-align: center !important;
   padding: 32px 24px;
   background: rgba(0,0,0,0.45);
   color: #fff;
@@ -844,7 +844,7 @@ tr:last-child td { border-bottom: none; }
 .join-sec {
   background: #f8f8f8;
   padding: 48px var(--gap);
-  text-align: center;
+  text-align: center !important;
   border-top: 1px solid var(--border);
 }
 .join-inner {
